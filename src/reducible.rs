@@ -1,5 +1,5 @@
 pub mod checked_reducible {
-    use crate::{CheckGcd, Zero, One, Checked};
+    use crate::{CheckGcd, Checked, One, Zero};
 
     use std::{
         fmt,
@@ -806,4 +806,131 @@ pub mod checked_reducible {
             write!(f, "({})/({})", self.num, self.denom)
         }
     }
+}
+
+pub mod rdc {
+    use crate::{Gcd, One, Zero};
+
+    use std::ops::{Add, Div, Mul, Neg, Sub};
+
+    pub struct Rdc<T: Gcd + Div<T, Output = T> + Zero> {
+        num: T,
+        denom: T,
+    }
+
+    impl<T> Rdc<T>
+    where
+        T: Gcd + Div<T, Output = T> + Clone + Zero,
+    {
+        pub fn num(&self) -> &T {
+            &self.num
+        }
+
+        pub fn denom(&self) -> &T {
+            &self.denom
+        }
+
+        fn simplify(self) -> Self {
+            let gcd = self.num().gcd(self.denom());
+
+            let num = self.num / gcd.clone();
+            let denom = self.denom / gcd;
+
+            Rdc { num, denom }
+        }
+
+        pub fn new(num: T, denom: T) -> Self {
+            let res = Rdc { num, denom };
+
+            res.simplify()
+        }
+    }
+
+    impl<T> Mul for Rdc<T>
+    where
+        T: Gcd + Mul<T, Output = T> + Div<T, Output = T> + Zero + Clone,
+    {
+        type Output = Self;
+
+        fn mul(self, rhs: Self) -> Self::Output {
+            Self::new(self.num * rhs.num, self.denom * rhs.denom)
+        }
+    }
+
+    impl<T> Div for Rdc<T>
+    where
+        T: Gcd + Div<T, Output = T> + Clone + Mul<T, Output = T> + Zero,
+    {
+        type Output = Self;
+
+        fn div(self, rhs: Self) -> Self::Output {
+            Self::new(self.num * rhs.denom, self.denom * rhs.num)
+        }
+    }
+
+    impl<T> Add for Rdc<T>
+    where
+        for<'a> &'a T: Mul<&'a T, Output = T>,
+        T: Gcd + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Clone + Zero,
+    {
+        type Output = Self;
+
+        fn add(self, rhs: Self) -> Self::Output {
+            let denom = self.denom() * rhs.denom();
+
+            let num = self.num * rhs.denom + self.denom * rhs.num;
+
+            Self::new(num, denom)
+        }
+    }
+
+    impl<T> Sub for Rdc<T>
+    where
+        for<'a> &'a T: Mul<&'a T, Output = T>,
+        T: Gcd + Div<T, Output = T> + Mul<T, Output = T> + Sub<T, Output = T> + Clone + Zero,
+    {
+        type Output = Self;
+
+        fn sub(self, rhs: Self) -> Self::Output {
+            let denom = self.denom() * rhs.denom();
+
+            let num = self.num * rhs.denom - self.denom * rhs.num;
+
+            Self::new(num, denom)
+        }
+    }
+
+    impl<T> Neg for Rdc<T>
+    where
+        for<'a> &'a T: Mul<&'a T, Output = T>,
+        T: Gcd + Div<T, Output = T> + Mul<T, Output = T> + Sub<T, Output = T> + Clone + Zero + One,
+    {
+        type Output = Self;
+
+        fn neg(self) -> Self {
+            Self::ZERO - self
+        }
+    }
+
+    impl<T> Zero for Rdc<T>
+    where
+        T: Zero + Gcd + Div<T, Output = T> + One,
+    {
+        const ZERO: Self = Rdc {
+            num: T::ZERO,
+            denom: T::ONE,
+        };
+    }
+
+    impl<T> One for Rdc<T>
+    where
+        T: Zero + Gcd + Div<T, Output = T> + One,
+    {
+        const ONE: Self = Rdc {
+            num: T::ONE,
+            denom: T::ONE,
+        };
+    }
+
+    // TODO: implement ref and mut ref ops
 }
