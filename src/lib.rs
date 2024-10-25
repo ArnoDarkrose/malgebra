@@ -1,3 +1,4 @@
+pub mod primitives;
 pub mod reducible;
 
 pub trait CheckGcd: Sized + Checked {
