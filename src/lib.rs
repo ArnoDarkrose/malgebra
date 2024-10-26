@@ -1,5 +1,8 @@
+#![feature(portable_simd)]
+
 pub mod primitives;
 pub mod reducible;
+pub mod vector;
 
 pub trait CheckGcd: Sized + Checked {
     fn gcd(&self, rhs: &Self) -> Option<Self>;
